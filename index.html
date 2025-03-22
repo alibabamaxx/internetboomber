@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İnternet Yokedici 3.0</title>
+    <title>İnternet Yokedici Ultimate Seçmeli</title>
     <style>
-        #kullanimBar {
+        .barContainer {
             width: 100%;
             background-color: #ddd;
             height: 30px;
             margin-top: 10px;
             position: relative;
         }
-        #bar {
+        .bar {
             height: 100%;
             text-align: center;
             color: white;
@@ -24,15 +24,24 @@
             font-size: 12px;
             margin-top: 5px;
         }
+        button {
+            margin: 5px;
+        }
     </style>
 </head>
 <body>
     <h1>Wi-Fi Yokedici Ultimate</h1>
-    <button onclick="yoket()">Başlat</button>
-    <button onclick="durdur()">Durdur</button>
+    <div>
+        <button onclick="baslat('min')">Min</button>
+        <button onclick="baslat('normal')">Normal</button>
+        <button onclick="baslat('max')">Max</button>
+        <button onclick="baslat('ultimate')">Ultimate</button>
+        <button onclick="durdur()">Durdur</button>
+    </div>
     <p id="durum">Durum: Hazır</p>
-    <div id="kullanimBar">
-        <div id="bar">0 Mbps</div>
+    <div>Hedef Kullanım:</div>
+    <div class="barContainer">
+        <div id="hedefBar">0 Mbps</div>
     </div>
     <div id="etiketler">
         <span>Min (0)</span>
@@ -40,29 +49,43 @@
         <span>Max (8)</span>
         <span>Ultimate (16)</span>
     </div>
+    <div>Şu Anki Kullanım:</div>
+    <div class="barContainer">
+        <div id="gercekBar">0 Mbps</div>
+    </div>
 
     <script>
         let aktif = false;
-        let toplamKullanim = 0;
+        let hedefKullanim = 0;
+        let gercekKullanim = 0;
+        const maxHiz = 16; // 16 Mbps internet hızın
 
-        function yoket() {
+        const kaynaklar = [
+            "https://speed.hetzner.de/10GB.bin",
+            "https://speed.hetzner.de/1GB.bin",
+            "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_30mb.mp4",
+            "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4",
+            "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.avi"
+        ];
+
+        function baslat(mod) {
             if (aktif) return;
             aktif = true;
-            document.getElementById("durum").innerHTML = "Durum: Wi-Fi sıkıştırılıyor...";
-            toplamKullanim = 0;
 
-            const kaynaklar = [
-                "https://speed.hetzner.de/10GB.bin",
-                "https://speed.hetzner.de/1GB.bin",
-                "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_30mb.mp4",
-                "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4",
-                "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.avi"
-            ];
+            const modlar = {
+                "min": { istek: 10, video: 2, ws: 1, hedef: 4 },
+                "normal": { istek: 30, video: 5, ws: 3, hedef: 8 },
+                "max": { istek: 75, video: 15, ws: 8, hedef: 12 },
+                "ultimate": { istek: 150, video: 30, ws: 15, hedef: 16 }
+            };
+            const secilenMod = modlar[mod];
+            hedefKullanim = secilenMod.hedef;
+            document.getElementById("durum").innerHTML = `Durum: ${mod.toUpperCase()} mod aktif! Wi-Fi sıkıştırılıyor...`;
+            gercekKullanim = 0;
 
-            function ultraIndirme(seviye) {
+            function ultraIndirme() {
                 if (!aktif) return;
-                const istekSayisi = seviye === "ultimate" ? 150 : seviye === "max" ? 75 : seviye === "normal" ? 30 : 10;
-                for (let i = 0; i < istekSayisi; i++) {
+                for (let i = 0; i < secilenMod.istek; i++) {
                     const url = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
                     const baslangicZamani = Date.now();
                     fetch(url + "?cacheBust=" + Math.random(), { cache: "no-store" })
@@ -72,83 +95,79 @@
                             const sure = (bitisZamani - baslangicZamani) / 1000;
                             const boyut = blob.size / 1024 / 1024;
                             const hiz = (boyut * 8) / sure;
-                            toplamKullanim += hiz;
-                            guncelleBar();
+                            gercekKullanim = Math.min(gercekKullanim + hiz, maxHiz);
+                            guncelleBarlar();
                         })
                         .catch(() => {});
                 }
-                if (aktif) setTimeout(() => ultraIndirme(getSeviye()), 100);
+                if (aktif) setTimeout(ultraIndirme, 100);
             }
 
-            function videoCildirtici(seviye) {
+            function videoCildirtici() {
                 if (!aktif) return;
-                const videoSayisi = seviye === "ultimate" ? 30 : seviye === "max" ? 15 : seviye === "normal" ? 5 : 2;
-                for (let i = 0; i < videoSayisi; i++) {
+                for (let i = 0; i < secilenMod.video; i++) {
                     const video = document.createElement("video");
                     video.src = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
                     video.loop = true;
                     video.play().catch(() => {});
-                    toplamKullanim += 0.5;
+                    gercekKullanim = Math.min(gercekKullanim + 0.5, maxHiz);
                 }
-                if (aktif) setTimeout(() => videoCildirtici(getSeviye()), 300);
+                if (aktif) setTimeout(videoCildirtici, 300);
             }
 
-            function uploadYoket(seviye) {
+            function uploadYoket() {
                 if (!aktif) return;
-                const wsSayisi = seviye === "ultimate" ? 15 : seviye === "max" ? 8 : seviye === "normal" ? 3 : 1;
-                for (let i = 0; i < wsSayisi; i++) {
+                for (let i = 0; i < secilenMod.ws; i++) {
                     const ws = new WebSocket("wss://echo.websocket.org");
                     ws.onopen = () => {
                         setInterval(() => {
                             if (ws.readyState === WebSocket.OPEN && aktif) {
-                                ws.send(new ArrayBuffer(3 * 1024 * 1024)); // 3 MB veri
-                                toplamKullanim += 0.3;
+                                ws.send(new ArrayBuffer(3 * 1024 * 1024));
+                                gercekKullanim = Math.min(gercekKullanim + 0.3, maxHiz);
                             }
                         }, 50);
                     };
                 }
             }
 
-            function getSeviye() {
-                if (toplamKullanim >= 12) return "ultimate";
-                if (toplamKullanim >= 8) return "max";
-                if (toplamKullanim >= 4) return "normal";
-                return "min";
-            }
+            ultraIndirme();
+            videoCildirtici();
+            uploadYoket();
+            guncelleBarlar();
+        }
 
-            function guncelleBar() {
-                const bar = document.getElementById("bar");
-                const kullanim = Math.min(toplamKullanim, 16);
-                const yuzde = (kullanim / 16) * 100;
-                bar.style.width = yuzde + "%";
-                bar.innerHTML = kullanim.toFixed(1) + " Mbps";
+        function guncelleBarlar() {
+            const hedefBar = document.getElementById("hedefBar");
+            const gercekBar = document.getElementById("gercekBar");
 
-                // Renkler: Min (mavi), Normal (yeşil), Max (turuncu), Ultimate (kırmızı)
-                if (kullanim >= 12) {
-                    bar.style.backgroundColor = "#ff0000"; // Ultimate
-                    document.getElementById("durum").innerHTML = "Durum: ULTIMATE MOD - TÜM İNTERNET YOK EDİLİYOR!";
-                } else if (kullanim >= 8) {
-                    bar.style.backgroundColor = "#ff8000"; // Max
-                } else if (kullanim >= 4) {
-                    bar.style.backgroundColor = "#00cc00"; // Normal
-                } else {
-                    bar.style.backgroundColor = "#0066cc"; // Min
-                }
-            }
+            // Hedef bar
+            const hedefYuzde = (hedefKullanim / maxHiz) * 100;
+            hedefBar.style.width = hedefYuzde + "%";
+            hedefBar.innerHTML = hedefKullanim + " Mbps";
+            if (hedefKullanim >= 16) hedefBar.style.backgroundColor = "#ff0000"; // Ultimate
+            else if (hedefKullanim >= 12) hedefBar.style.backgroundColor = "#ff8000"; // Max
+            else if (hedefKullanim >= 8) hedefBar.style.backgroundColor = "#00cc00"; // Normal
+            else hedefBar.style.backgroundColor = "#0066cc"; // Min
 
-            ultraIndirme("min");
-            videoCildirtici("min");
-            uploadYoket("min");
+            // Gerçek kullanım barı
+            const gercekYuzde = (gercekKullanim / maxHiz) * 100;
+            gercekBar.style.width = gercekYuzde + "%";
+            gercekBar.innerHTML = gercekKullanim.toFixed(1) + " Mbps";
+            gercekBar.style.backgroundColor = "#6600cc"; // Mor renk, gerçek kullanım için
         }
 
         function durdur() {
             aktif = false;
-            toplamKullanim = 0;
+            hedefKullanim = 0;
+            gercekKullanim = 0;
             document.getElementById("durum").innerHTML = "Durum: Durduruldu. Wi-Fi kurtuldu!";
-            const bar = document.getElementById("bar");
-            bar.style.width = "0%";
-            bar.innerHTML = "0 Mbps";
-            bar.style.backgroundColor = "#0066cc";
+            const hedefBar = document.getElementById("hedefBar");
+            const gercekBar = document.getElementById("gercekBar");
+            hedefBar.style.width = "0%";
+            hedefBar.innerHTML = "0 Mbps";
+            hedefBar.style.backgroundColor = "#0066cc";
+            gercekBar.style.width = "0%";
+            gercekBar.innerHTML = "0 Mbps";
         }
     </script>
 </body>
