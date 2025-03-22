@@ -3,83 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İnternet Yokedici Şaka</title>
+    <title>İnternet Yokedici 2.0</title>
+    <style>
+        #kullanimBar {
+            width: 100%;
+            background-color: #ddd;
+            height: 20px;
+            margin-top: 10px;
+        }
+        #bar {
+            width: 0%;
+            height: 100%;
+            background-color: #ff4444;
+            text-align: center;
+            color: white;
+            transition: width 0.5s;
+        }
+    </style>
 </head>
 <body>
-    <h1>Wi-Fi Yokedici</h1>
+    <h1>Wi-Fi Yokedici 2.0</h1>
     <button onclick="yoket()">Başlat</button>
     <button onclick="durdur()">Durdur</button>
     <p id="durum">Durum: Hazır</p>
+    <div id="kullanimBar">
+        <div id="bar">0 Mbps</div>
+    </div>
 
     <script>
         let aktif = false;
+        let toplamKullanim = 0;
 
         function yoket() {
-            if (aktif) return; // Zaten çalışıyorsa başlatma
+            if (aktif) return;
             aktif = true;
-            document.getElementById("durum").innerHTML = "Durum: Wi-Fi yok ediliyor... Kardeşin oyunu mahvolacak!";
+            document.getElementById("durum").innerHTML = "Durum: Wi-Fi yok ediliyor... Kardeşin oyunu bitik!";
+            toplamKullanim = 0;
 
-            // Büyük dosya ve akış kaynakları
             const kaynaklar = [
-                "https://speed.hetzner.de/10GB.bin", // 10 GB dosya
-                "https://speed.hetzner.de/1GB.bin",  // 1 GB dosya
+                "https://speed.hetzner.de/10GB.bin",
+                "https://speed.hetzner.de/1GB.bin",
                 "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_30mb.mp4",
                 "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4",
-                "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.avi" // Büyük video dosyası
+                "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.avi"
             ];
 
-            // Çoklu dosya indirme (50 paralel istek)
-            function agresifIndirme() {
+            // 100 paralel indirme isteği
+            function ultraIndirme() {
                 if (!aktif) return;
-                for (let i = 0; i < 50; i++) { // 50 eşzamanlı istek
-                    kaynaklar.forEach(url => {
-                        fetch(url + "?cacheBust=" + Math.random(), { cache: "no-store" })
-                            .then(response => response.blob())
-                            .then(blob => {
-                                console.log("İndirildi: " + url);
-                            })
-                            .catch(error => console.error("Hata:", error));
-                    });
+                for (let i = 0; i < 100; i++) { // 100 eşzamanlı istek
+                    const url = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
+                    const baslangicZamani = Date.now();
+                    fetch(url + "?cacheBust=" + Math.random(), { cache: "no-store" })
+                        .then(response => response.blob())
+                        .then(blob => {
+                            const bitisZamani = Date.now();
+                            const sure = (bitisZamani - baslangicZamani) / 1000; // saniye cinsinden
+                            const boyut = blob.size / 1024 / 1024; // MB cinsinden
+                            const hiz = (boyut * 8) / sure; // Mbps cinsinden
+                            toplamKullanim += hiz;
+                            guncelleBar();
+                        })
+                        .catch(() => {});
                 }
-                if (aktif) setTimeout(agresifIndirme, 200); // Her 0.2 saniyede tekrar
+                if (aktif) setTimeout(ultraIndirme, 100); // Her 0.1 saniyede tekrar
             }
 
-            // Çoklu video akışı
-            function videoBombasi() {
+            // 20 video akışı
+            function videoCildirtici() {
                 if (!aktif) return;
-                for (let i = 0; i < 10; i++) { // 10 paralel video akışı
+                for (let i = 0; i < 20; i++) {
                     const video = document.createElement("video");
                     video.src = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
                     video.loop = true;
                     video.play().catch(() => {});
+                    toplamKullanim += 0.5; // Her video için tahmini 0.5 Mbps ekle
                 }
-                if (aktif) setTimeout(videoBombasi, 500); // Her 0.5 saniyede yeni akışlar
+                if (aktif) setTimeout(videoCildirtici, 300); // Her 0.3 saniyede yenile
             }
 
-            // Sahte WebSocket bağlantıları (ekstra bant genişliği tüketimi)
-            function sahteWebSocket() {
+            // WebSocket ile upload sıkıştırma
+            function uploadYoket() {
                 if (!aktif) return;
-                for (let i = 0; i < 5; i++) {
+                for (let i = 0; i < 10; i++) {
                     const ws = new WebSocket("wss://echo.websocket.org");
                     ws.onopen = () => {
                         setInterval(() => {
                             if (ws.readyState === WebSocket.OPEN && aktif) {
-                                ws.send(new ArrayBuffer(1024 * 1024)); // 1 MB veri gönder
+                                ws.send(new ArrayBuffer(2 * 1024 * 1024)); // 2 MB veri
+                                toplamKullanim += 0.2; // Upload tahmini katkı
                             }
-                        }, 100);
+                        }, 50);
                     };
                 }
             }
 
-            // Tüm işlemleri başlat
-            agresifIndirme();  // Dosya indirme
-            videoBombasi();    // Video akışları
-            sahteWebSocket();  // WebSocket veri akışı
+            // Kullanım barını güncelle
+            function guncelleBar() {
+                const bar = document.getElementById("bar");
+                const kullanim = Math.min(toplamKullanim, 16); // 16 Mbps limiti
+                const yuzde = (kullanim / 16) * 100;
+                bar.style.width = yuzde + "%";
+                bar.innerHTML = kullanim.toFixed(1) + " Mbps";
+            }
+
+            ultraIndirme();  // İndirme başlar
+            videoCildirtici(); // Video akışları
+            uploadYoket();    // Upload sıkıştırma
         }
 
         function durdur() {
             aktif = false;
+            toplamKullanim = 0;
             document.getElementById("durum").innerHTML = "Durum: Durduruldu. Wi-Fi kurtuldu!";
+            const bar = document.getElementById("bar");
+            bar.style.width = "0%";
+            bar.innerHTML = "0 Mbps";
         }
     </script>
 </body>
