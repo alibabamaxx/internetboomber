@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İnternet Yokedici Ultimate Seçmeli</title>
+    <title>İnternet Yokedici Canlı</title>
     <style>
         .barContainer {
             width: 100%;
@@ -30,7 +30,7 @@
     </style>
 </head>
 <body>
-    <h1>Wi-Fi Yokedici Ultimate</h1>
+    <h1>Wi-Fi Yokedici Canlı</h1>
     <div>
         <button onclick="baslat('min')">Min</button>
         <button onclick="baslat('normal')">Normal</button>
@@ -49,7 +49,7 @@
         <span>Max (8)</span>
         <span>Ultimate (16)</span>
     </div>
-    <div>Şu Anki Kullanım:</div>
+    <div>Şu Anki Kullanım (Canlı):</div>
     <div class="barContainer">
         <div id="gercekBar">0 Mbps</div>
     </div>
@@ -59,6 +59,7 @@
         let hedefKullanim = 0;
         let gercekKullanim = 0;
         const maxHiz = 16; // 16 Mbps internet hızın
+        let performansZamanlayici;
 
         const kaynaklar = [
             "https://speed.hetzner.de/10GB.bin",
@@ -87,17 +88,8 @@
                 if (!aktif) return;
                 for (let i = 0; i < secilenMod.istek; i++) {
                     const url = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
-                    const baslangicZamani = Date.now();
                     fetch(url + "?cacheBust=" + Math.random(), { cache: "no-store" })
                         .then(response => response.blob())
-                        .then(blob => {
-                            const bitisZamani = Date.now();
-                            const sure = (bitisZamani - baslangicZamani) / 1000;
-                            const boyut = blob.size / 1024 / 1024;
-                            const hiz = (boyut * 8) / sure;
-                            gercekKullanim = Math.min(gercekKullanim + hiz, maxHiz);
-                            guncelleBarlar();
-                        })
                         .catch(() => {});
                 }
                 if (aktif) setTimeout(ultraIndirme, 100);
@@ -110,7 +102,6 @@
                     video.src = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
                     video.loop = true;
                     video.play().catch(() => {});
-                    gercekKullanim = Math.min(gercekKullanim + 0.5, maxHiz);
                 }
                 if (aktif) setTimeout(videoCildirtici, 300);
             }
@@ -123,17 +114,39 @@
                         setInterval(() => {
                             if (ws.readyState === WebSocket.OPEN && aktif) {
                                 ws.send(new ArrayBuffer(3 * 1024 * 1024));
-                                gercekKullanim = Math.min(gercekKullanim + 0.3, maxHiz);
                             }
                         }, 50);
                     };
                 }
             }
 
+            // Gerçek zamanlı kullanım ölçümü
+            function canliKullanimHesapla() {
+                performance.clearResourceTimings();
+                const testUrl = "https://speed.hetzner.de/100MB.bin";
+                const baslangic = performance.now();
+                fetch(testUrl + "?cacheBust=" + Math.random(), { cache: "no-store" })
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const bitis = performance.now();
+                        const sure = (bitis - baslangic) / 1000; // saniye
+                        const boyut = blob.size / 1024 / 1024; // MB
+                        gercekKullanim = Math.min((boyut * 8) / sure, maxHiz); // Mbps
+                        guncelleBarlar();
+                    })
+                    .catch(() => {
+                        gercekKullanim = 0; // Hata olursa sıfırla
+                        guncelleBarlar();
+                    });
+            }
+
             ultraIndirme();
             videoCildirtici();
             uploadYoket();
             guncelleBarlar();
+
+            // Her 1 saniyede bir gerçek kullanımı kontrol et
+            performansZamanlayici = setInterval(canliKullanimHesapla, 1000);
         }
 
         function guncelleBarlar() {
@@ -149,17 +162,18 @@
             else if (hedefKullanim >= 8) hedefBar.style.backgroundColor = "#00cc00"; // Normal
             else hedefBar.style.backgroundColor = "#0066cc"; // Min
 
-            // Gerçek kullanım barı
+            // Gerçek kullanım barı (canlı)
             const gercekYuzde = (gercekKullanim / maxHiz) * 100;
             gercekBar.style.width = gercekYuzde + "%";
             gercekBar.innerHTML = gercekKullanim.toFixed(1) + " Mbps";
-            gercekBar.style.backgroundColor = "#6600cc"; // Mor renk, gerçek kullanım için
+            gercekBar.style.backgroundColor = "#6600cc"; // Mor renk
         }
 
         function durdur() {
             aktif = false;
             hedefKullanim = 0;
             gercekKullanim = 0;
+            clearInterval(performansZamanlayici);
             document.getElementById("durum").innerHTML = "Durum: Durduruldu. Wi-Fi kurtuldu!";
             const hedefBar = document.getElementById("hedefBar");
             const gercekBar = document.getElementById("gercekBar");
