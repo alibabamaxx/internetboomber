@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İnternet Yokedici Şaka</title>
+</head>
+<body>
+    <h1>Wi-Fi Yokedici</h1>
+    <button onclick="yoket()">Başlat</button>
+    <button onclick="durdur()">Durdur</button>
+    <p id="durum">Durum: Hazır</p>
+
+    <script>
+        let aktif = false;
+
+        function yoket() {
+            if (aktif) return; // Zaten çalışıyorsa başlatma
+            aktif = true;
+            document.getElementById("durum").innerHTML = "Durum: Wi-Fi yok ediliyor... Kardeşin oyunu mahvolacak!";
+
+            // Büyük dosya ve akış kaynakları
+            const kaynaklar = [
+                "https://speed.hetzner.de/10GB.bin", // 10 GB dosya
+                "https://speed.hetzner.de/1GB.bin",  // 1 GB dosya
+                "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_30mb.mp4",
+                "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4",
+                "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.avi" // Büyük video dosyası
+            ];
+
+            // Çoklu dosya indirme (50 paralel istek)
+            function agresifIndirme() {
+                if (!aktif) return;
+                for (let i = 0; i < 50; i++) { // 50 eşzamanlı istek
+                    kaynaklar.forEach(url => {
+                        fetch(url + "?cacheBust=" + Math.random(), { cache: "no-store" })
+                            .then(response => response.blob())
+                            .then(blob => {
+                                console.log("İndirildi: " + url);
+                            })
+                            .catch(error => console.error("Hata:", error));
+                    });
+                }
+                if (aktif) setTimeout(agresifIndirme, 200); // Her 0.2 saniyede tekrar
+            }
+
+            // Çoklu video akışı
+            function videoBombasi() {
+                if (!aktif) return;
+                for (let i = 0; i < 10; i++) { // 10 paralel video akışı
+                    const video = document.createElement("video");
+                    video.src = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
+                    video.loop = true;
+                    video.play().catch(() => {});
+                }
+                if (aktif) setTimeout(videoBombasi, 500); // Her 0.5 saniyede yeni akışlar
+            }
+
+            // Sahte WebSocket bağlantıları (ekstra bant genişliği tüketimi)
+            function sahteWebSocket() {
+                if (!aktif) return;
+                for (let i = 0; i < 5; i++) {
+                    const ws = new WebSocket("wss://echo.websocket.org");
+                    ws.onopen = () => {
+                        setInterval(() => {
+                            if (ws.readyState === WebSocket.OPEN && aktif) {
+                                ws.send(new ArrayBuffer(1024 * 1024)); // 1 MB veri gönder
+                            }
+                        }, 100);
+                    };
+                }
+            }
+
+            // Tüm işlemleri başlat
+            agresifIndirme();  // Dosya indirme
+            videoBombasi();    // Video akışları
+            sahteWebSocket();  // WebSocket veri akışı
+        }
+
+        function durdur() {
+            aktif = false;
+            document.getElementById("durum").innerHTML = "Durum: Durduruldu. Wi-Fi kurtuldu!";
+        }
+    </script>
+</body>
+</html>
