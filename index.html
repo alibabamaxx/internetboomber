@@ -3,31 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İnternet Yokedici 2.0</title>
+    <title>İnternet Yokedici 3.0</title>
     <style>
         #kullanimBar {
             width: 100%;
             background-color: #ddd;
-            height: 20px;
+            height: 30px;
             margin-top: 10px;
+            position: relative;
         }
         #bar {
-            width: 0%;
             height: 100%;
-            background-color: #ff4444;
             text-align: center;
             color: white;
             transition: width 0.5s;
         }
+        #etiketler {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
-    <h1>Wi-Fi Yokedici 2.0</h1>
+    <h1>Wi-Fi Yokedici Ultimate</h1>
     <button onclick="yoket()">Başlat</button>
     <button onclick="durdur()">Durdur</button>
     <p id="durum">Durum: Hazır</p>
     <div id="kullanimBar">
         <div id="bar">0 Mbps</div>
+    </div>
+    <div id="etiketler">
+        <span>Min (0)</span>
+        <span>Normal (4)</span>
+        <span>Max (8)</span>
+        <span>Ultimate (16)</span>
     </div>
 
     <script>
@@ -37,7 +48,7 @@
         function yoket() {
             if (aktif) return;
             aktif = true;
-            document.getElementById("durum").innerHTML = "Durum: Wi-Fi yok ediliyor... Kardeşin oyunu bitik!";
+            document.getElementById("durum").innerHTML = "Durum: Wi-Fi sıkıştırılıyor...";
             toplamKullanim = 0;
 
             const kaynaklar = [
@@ -48,68 +59,86 @@
                 "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.avi"
             ];
 
-            // 100 paralel indirme isteği
-            function ultraIndirme() {
+            function ultraIndirme(seviye) {
                 if (!aktif) return;
-                for (let i = 0; i < 100; i++) { // 100 eşzamanlı istek
+                const istekSayisi = seviye === "ultimate" ? 150 : seviye === "max" ? 75 : seviye === "normal" ? 30 : 10;
+                for (let i = 0; i < istekSayisi; i++) {
                     const url = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
                     const baslangicZamani = Date.now();
                     fetch(url + "?cacheBust=" + Math.random(), { cache: "no-store" })
                         .then(response => response.blob())
                         .then(blob => {
                             const bitisZamani = Date.now();
-                            const sure = (bitisZamani - baslangicZamani) / 1000; // saniye cinsinden
-                            const boyut = blob.size / 1024 / 1024; // MB cinsinden
-                            const hiz = (boyut * 8) / sure; // Mbps cinsinden
+                            const sure = (bitisZamani - baslangicZamani) / 1000;
+                            const boyut = blob.size / 1024 / 1024;
+                            const hiz = (boyut * 8) / sure;
                             toplamKullanim += hiz;
                             guncelleBar();
                         })
                         .catch(() => {});
                 }
-                if (aktif) setTimeout(ultraIndirme, 100); // Her 0.1 saniyede tekrar
+                if (aktif) setTimeout(() => ultraIndirme(getSeviye()), 100);
             }
 
-            // 20 video akışı
-            function videoCildirtici() {
+            function videoCildirtici(seviye) {
                 if (!aktif) return;
-                for (let i = 0; i < 20; i++) {
+                const videoSayisi = seviye === "ultimate" ? 30 : seviye === "max" ? 15 : seviye === "normal" ? 5 : 2;
+                for (let i = 0; i < videoSayisi; i++) {
                     const video = document.createElement("video");
                     video.src = kaynaklar[Math.floor(Math.random() * kaynaklar.length)];
                     video.loop = true;
                     video.play().catch(() => {});
-                    toplamKullanim += 0.5; // Her video için tahmini 0.5 Mbps ekle
+                    toplamKullanim += 0.5;
                 }
-                if (aktif) setTimeout(videoCildirtici, 300); // Her 0.3 saniyede yenile
+                if (aktif) setTimeout(() => videoCildirtici(getSeviye()), 300);
             }
 
-            // WebSocket ile upload sıkıştırma
-            function uploadYoket() {
+            function uploadYoket(seviye) {
                 if (!aktif) return;
-                for (let i = 0; i < 10; i++) {
+                const wsSayisi = seviye === "ultimate" ? 15 : seviye === "max" ? 8 : seviye === "normal" ? 3 : 1;
+                for (let i = 0; i < wsSayisi; i++) {
                     const ws = new WebSocket("wss://echo.websocket.org");
                     ws.onopen = () => {
                         setInterval(() => {
                             if (ws.readyState === WebSocket.OPEN && aktif) {
-                                ws.send(new ArrayBuffer(2 * 1024 * 1024)); // 2 MB veri
-                                toplamKullanim += 0.2; // Upload tahmini katkı
+                                ws.send(new ArrayBuffer(3 * 1024 * 1024)); // 3 MB veri
+                                toplamKullanim += 0.3;
                             }
                         }, 50);
                     };
                 }
             }
 
-            // Kullanım barını güncelle
+            function getSeviye() {
+                if (toplamKullanim >= 12) return "ultimate";
+                if (toplamKullanim >= 8) return "max";
+                if (toplamKullanim >= 4) return "normal";
+                return "min";
+            }
+
             function guncelleBar() {
                 const bar = document.getElementById("bar");
-                const kullanim = Math.min(toplamKullanim, 16); // 16 Mbps limiti
+                const kullanim = Math.min(toplamKullanim, 16);
                 const yuzde = (kullanim / 16) * 100;
                 bar.style.width = yuzde + "%";
                 bar.innerHTML = kullanim.toFixed(1) + " Mbps";
+
+                // Renkler: Min (mavi), Normal (yeşil), Max (turuncu), Ultimate (kırmızı)
+                if (kullanim >= 12) {
+                    bar.style.backgroundColor = "#ff0000"; // Ultimate
+                    document.getElementById("durum").innerHTML = "Durum: ULTIMATE MOD - TÜM İNTERNET YOK EDİLİYOR!";
+                } else if (kullanim >= 8) {
+                    bar.style.backgroundColor = "#ff8000"; // Max
+                } else if (kullanim >= 4) {
+                    bar.style.backgroundColor = "#00cc00"; // Normal
+                } else {
+                    bar.style.backgroundColor = "#0066cc"; // Min
+                }
             }
 
-            ultraIndirme();  // İndirme başlar
-            videoCildirtici(); // Video akışları
-            uploadYoket();    // Upload sıkıştırma
+            ultraIndirme("min");
+            videoCildirtici("min");
+            uploadYoket("min");
         }
 
         function durdur() {
@@ -119,6 +148,7 @@
             const bar = document.getElementById("bar");
             bar.style.width = "0%";
             bar.innerHTML = "0 Mbps";
+            bar.style.backgroundColor = "#0066cc";
         }
     </script>
 </body>
